@@ -18,7 +18,6 @@ import edu.virginia.sde.hw3.Representation;
 import edu.virginia.sde.hw3.State;
 import edu.virginia.sde.hw3.States;
 
-import java.util.ArrayList;
 import java.util.Map.Entry;
 
 
@@ -53,18 +52,10 @@ public class HamiltonMethod implements ApportionmentMethod {
         var remainders = states.getRemainders(divisor);
         var remainingRepresentatives = seats - representation.getAllocatedSeats();
 
-        // TODO - replace the code down to the end of the for loop with a stream that adds the "bonus" representatives
-        // Hint: your stream's terminal operation should be a forEach
-        // quotas.entrySet().stream()  // OR
-        // quotas.keySet().stream() // OR
-        var remainderEntries = new ArrayList<>(remainders.entrySet());
-        remainderEntries.sort(Entry.<State, Double>comparingByValue().reversed());
-
-        for (int index = 0; index < remainingRepresentatives; index++) {
-            State state = remainderEntries.get(index).getKey();
-            representation.addSeats(state, 1);
-        }
-        // TODO - this is the end of the code to replace with a stream
+        remainders.entrySet().stream()
+                .sorted(Entry.<State, Double>comparingByValue().reversed())
+                .limit(remainingRepresentatives)
+                .forEach(entry -> representation.addSeats(entry.getKey(), 1));
 
         return representation;
     }

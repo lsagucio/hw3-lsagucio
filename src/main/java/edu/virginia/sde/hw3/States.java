@@ -15,6 +15,7 @@
 package edu.virginia.sde.hw3;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * This represents a group of States. This class contains several mathematical functions useful for apportionment
@@ -97,14 +98,9 @@ public class States implements Iterable<State> {
      * @return the combined population of every state
      */
     public int getTotalPopulation() {
-        // TODO - replace the code in this method with a stream
-        // return states.stream()
-        int sum = 0;
-        for (State state : states) {
-            int population = state.population();
-            sum += population;
-        }
-        return sum;
+        return states.stream()
+                .mapToInt(State::population)
+                .sum();
     }
 
     /**
@@ -123,13 +119,8 @@ public class States implements Iterable<State> {
      * @return A mapping of states to their floating-point quotas
      */
     public Map<State, Double> getQuotas(double divisor) {
-        // TODO - replace the code in this method with a stream
-        // return states.stream()
-        Map<State, Double> quotas = new HashMap<>();
-        for (State state : states) {
-            quotas.put(state, state.population() / divisor);
-        }
-        return quotas;
+        return states.stream()
+                .collect(Collectors.toMap(state -> state, state -> state.population() / divisor));
     }
 
     /**
@@ -140,14 +131,8 @@ public class States implements Iterable<State> {
      */
     public Map<State, Integer> getRoundedDownQuotas(double divisor) {
         Map<State, Double> quotas = getQuotas(divisor);
-        // TODO - replace the rest of the code in this method with a stream
-        // return quotas.entrySet().stream()  // OR
-        // return quotas.keySet().stream()
-        Map<State, Integer> roundedDownQuotas = new HashMap<>();
-        for (State state : quotas.keySet()) {
-            roundedDownQuotas.put(state, (int) Math.floor(quotas.get(state)));
-        }
-        return roundedDownQuotas;
+        return quotas.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> (int) Math.floor(entry.getValue())));
     }
 
     /**
@@ -158,14 +143,8 @@ public class States implements Iterable<State> {
      */
     public Map<State, Double> getRemainders(double divisor) {
         Map<State, Double> quotas = getQuotas(divisor);
-        // TODO - replace the rest of the code in this method with a stream
-        // return quotas.entrySet().stream()  // OR
-        // return quotas.keySet().stream()
-        Map<State, Double> remainders = new HashMap<>();
-        for (State state : quotas.keySet()) {
-            remainders.put(state,  quotas.get(state) - Math.floor(quotas.get(state)));
-        }
-        return remainders;
+        return quotas.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue() - Math.floor(entry.getValue())));
     }
 
     @Override

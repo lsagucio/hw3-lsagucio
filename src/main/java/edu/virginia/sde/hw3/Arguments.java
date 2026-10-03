@@ -16,13 +16,17 @@ package edu.virginia.sde.hw3;
 
 import edu.virginia.sde.hw3.algorithms.ApportionmentMethod;
 import edu.virginia.sde.hw3.algorithms.HamiltonMethod;
+import edu.virginia.sde.hw3.algorithms.HuntingtonHillMethod;
 import edu.virginia.sde.hw3.algorithms.JeffersonMethod;
 import edu.virginia.sde.hw3.formats.AlphabeticalFormat;
+import edu.virginia.sde.hw3.formats.BenefitFormat;
 import edu.virginia.sde.hw3.formats.DisplayOrder;
 import edu.virginia.sde.hw3.formats.PopulationFormat;
 import edu.virginia.sde.hw3.formats.RepresentationFormat;
 import edu.virginia.sde.hw3.io.CSVOutputFile;
 import edu.virginia.sde.hw3.io.CSVInputFile;
+import edu.virginia.sde.hw3.io.ExcelInputFile;
+import edu.virginia.sde.hw3.io.ExcelOutputFile;
 import edu.virginia.sde.hw3.io.OutputSource;
 import edu.virginia.sde.hw3.io.StateSource;
 
@@ -69,11 +73,15 @@ public class Arguments {
         if (filename.toLowerCase().endsWith(".csv")) {
             return new CSVInputFile(filename);
         }
+        if (filename.toLowerCase().endsWith(".xlsx")) {
+            return new ExcelInputFile(filename);
+        }
 
         throw new IllegalArgumentException(String.format("""
                 Unsupported input file: %s
                     This program currently supports the following input file formats:
                         - .csv files
+                        - .xlsx files
                 """, filename));
     }
 
@@ -103,28 +111,34 @@ public class Arguments {
     }
 
     /**
-     * Gets the apportionment algorithm to use. By default, we use {@link JeffersonMethod the Jefferson Method}, but
-     * the {@link HamiltonMethod can be selected with the --hamilton flag in the command line arguments}
+     * Gets the apportionment algorithm to use. By default, we use
+     * {@link HuntingtonHillMethod the Huntington-Hill Method}, but the {@link HamiltonMethod} can be selected with
+     * the --hamilton flag and the {@link JeffersonMethod} with the --jefferson flag in the command line arguments.
      * @return {@link ApportionmentMethod}
      */
     public ApportionmentMethod getApportionmentMethod() {
         if (args.contains("--hamilton")) {
             return new HamiltonMethod();
         }
-        return new JeffersonMethod();
+        if (args.contains("--jefferson")) {
+            return new JeffersonMethod();
+        }
+        return new HuntingtonHillMethod();
     }
 
     /**
-     * Returns how to display the apportionment to the console.
+     * Returns how to display the apportionment to the console. By default, states are displayed alphabetically.
+     * The --population flag sorts by population, and the --benefit flag sorts by {@link BenefitFormat benefit}.
+     * Both default to descending order, which can be changed with the --ascending flag.
      * @return {@link RepresentationFormat}
      */
     public RepresentationFormat getRepresentationFormat() {
+        DisplayOrder displayOrder = args.contains("--ascending") ? DisplayOrder.ASCENDING : DisplayOrder.DESCENDING;
         if (args.contains("--population")) {
-            if (args.contains("--ascending")) {
-                return new PopulationFormat(DisplayOrder.ASCENDING);
-            } else {
-                return new PopulationFormat(DisplayOrder.DESCENDING);
-            }
+            return new PopulationFormat(displayOrder);
+        }
+        if (args.contains("--benefit")) {
+            return new BenefitFormat(displayOrder);
         }
         return new AlphabeticalFormat();
     }
@@ -155,13 +169,17 @@ public class Arguments {
         }
 
         String outputFilename = args.get(index + 1);
-        if (!outputFilename.endsWith(".csv")) {
-            throw new IllegalArgumentException(String.format("""
-                Unsupported input file: %s
-                    This program currently supports the following input file formats:
-                        - .csv files
-                """, outputFilename));
+        if (outputFilename.endsWith(".csv")) {
+            return Optional.of(new CSVOutputFile(outputFilename));
         }
-        return Optional.of(new CSVOutputFile(outputFilename));
+        if (outputFilename.endsWith(".xlsx")) {
+            return Optional.of(new ExcelOutputFile(outputFilename));
+        }
+        throw new IllegalArgumentException(String.format("""
+                Unsupported output file: %s
+                    This program currently supports the following output file formats:
+                        - .csv files
+                        - .xlsx files
+                """, outputFilename));
     }
 }

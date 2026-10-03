@@ -84,15 +84,9 @@ public class Representation implements Iterable<State>{
      * @return the sum of seats allocated to all states combined
      */
     public int getAllocatedSeats() {
-        // TODO - replace the code in this method with a stream
-        // return representation.entrySet().stream()  // OR
-        // return representation.keySet().stream() // OR
-        // return representation.values().stream()
-        int totalSeats = 0;
-        for (int numberOfSeats : representation.values()) {
-            totalSeats += numberOfSeats;
-        }
-        return totalSeats;
+        return representation.values().stream()
+                .mapToInt(integer -> integer)
+                .sum();
     }
 
     /**

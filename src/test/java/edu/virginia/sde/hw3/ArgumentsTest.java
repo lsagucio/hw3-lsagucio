@@ -16,23 +16,36 @@ package edu.virginia.sde.hw3;
 
 import edu.virginia.sde.hw3.algorithms.ApportionmentMethod;
 import edu.virginia.sde.hw3.algorithms.HamiltonMethod;
+import edu.virginia.sde.hw3.algorithms.HuntingtonHillMethod;
 import edu.virginia.sde.hw3.algorithms.JeffersonMethod;
 import edu.virginia.sde.hw3.formats.AlphabeticalFormat;
+import edu.virginia.sde.hw3.formats.BenefitFormat;
 import edu.virginia.sde.hw3.formats.DisplayOrder;
 import edu.virginia.sde.hw3.formats.PopulationFormat;
 import edu.virginia.sde.hw3.formats.RepresentationFormat;
 import edu.virginia.sde.hw3.io.CSVOutputFile;
 import edu.virginia.sde.hw3.io.CSVInputFile;
+import edu.virginia.sde.hw3.io.ExcelInputFile;
+import edu.virginia.sde.hw3.io.ExcelOutputFile;
 import edu.virginia.sde.hw3.io.OutputSource;
 import edu.virginia.sde.hw3.io.StateSource;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ArgumentsTest {
-    public static final String TEST_CSV_LOCATION = "csv_test_files\\states.csv";
+    public static final String TEST_CSV_LOCATION = "csv_test_files/states.csv";
+
+    /** The test CSV location using the platform's file separator, for comparing against {@link File#getPath()} */
+    private static final String TEST_CSV_PATH = TEST_CSV_LOCATION.replace('/', File.separatorChar);
 
     @Test
     public void argumentsTest_inputFile_defaultReps_noOptions() {
@@ -45,11 +58,11 @@ public class ArgumentsTest {
         StateSource stateSource = arguments.getStateSupplier();
         assertInstanceOf(CSVInputFile.class, stateSource);
         String filename = ((CSVInputFile) stateSource).getCsvFile().getPath();
-        assertTrue(filename.endsWith(TEST_CSV_LOCATION),
+        assertTrue(filename.endsWith(TEST_CSV_PATH),
                 "Bad filename: " + filename);
 
         ApportionmentMethod method = arguments.getApportionmentMethod();
-        assertInstanceOf(JeffersonMethod.class, method);
+        assertInstanceOf(HuntingtonHillMethod.class, method);
 
         RepresentationFormat format = arguments.getRepresentationFormat();
         assertInstanceOf(AlphabeticalFormat.class, format);
@@ -68,7 +81,7 @@ public class ArgumentsTest {
         StateSource stateSource = arguments.getStateSupplier();
         assertInstanceOf(CSVInputFile.class, stateSource);
         String filename = ((CSVInputFile) stateSource).getCsvFile().getPath();
-        assertTrue(filename.endsWith(TEST_CSV_LOCATION),
+        assertTrue(filename.endsWith(TEST_CSV_PATH),
                 "Bad filename: " + filename);
 
         ApportionmentMethod method = arguments.getApportionmentMethod();
@@ -91,11 +104,11 @@ public class ArgumentsTest {
         StateSource stateSource = arguments.getStateSupplier();
         assertInstanceOf(CSVInputFile.class, stateSource);
         String filename = ((CSVInputFile) stateSource).getCsvFile().getPath();
-        assertTrue(filename.endsWith(TEST_CSV_LOCATION),
+        assertTrue(filename.endsWith(TEST_CSV_PATH),
                 "Bad filename: " + filename);
 
         ApportionmentMethod method = arguments.getApportionmentMethod();
-        assertInstanceOf(JeffersonMethod.class, method);
+        assertInstanceOf(HuntingtonHillMethod.class, method);
 
         RepresentationFormat format = arguments.getRepresentationFormat();
         assertInstanceOf(AlphabeticalFormat.class, format);
@@ -118,11 +131,11 @@ public class ArgumentsTest {
         StateSource stateSource = arguments.getStateSupplier();
         assertInstanceOf(CSVInputFile.class, stateSource);
         String filename = ((CSVInputFile) stateSource).getCsvFile().getPath();
-        assertTrue(filename.endsWith(TEST_CSV_LOCATION),
+        assertTrue(filename.endsWith(TEST_CSV_PATH),
                 "Bad filename: " + filename);
 
         ApportionmentMethod method = arguments.getApportionmentMethod();
-        assertInstanceOf(JeffersonMethod.class, method);
+        assertInstanceOf(HuntingtonHillMethod.class, method);
 
         RepresentationFormat format = arguments.getRepresentationFormat();
         assertInstanceOf(PopulationFormat.class, format);
@@ -143,11 +156,11 @@ public class ArgumentsTest {
         StateSource stateSource = arguments.getStateSupplier();
         assertInstanceOf(CSVInputFile.class, stateSource);
         String filename = ((CSVInputFile) stateSource).getCsvFile().getPath();
-        assertTrue(filename.endsWith(TEST_CSV_LOCATION),
+        assertTrue(filename.endsWith(TEST_CSV_PATH),
                 "Bad filename: " + filename);
 
         ApportionmentMethod method = arguments.getApportionmentMethod();
-        assertInstanceOf(JeffersonMethod.class, method);
+        assertInstanceOf(HuntingtonHillMethod.class, method);
 
         RepresentationFormat format = arguments.getRepresentationFormat();
         assertInstanceOf(PopulationFormat.class, format);
@@ -155,6 +168,65 @@ public class ArgumentsTest {
         assertEquals(DisplayOrder.ASCENDING, populationFormat.getDisplayOrder());
 
         assertTrue(arguments.getOutputFile().isEmpty());
+    }
+
+    @Test
+    public void argumentsTest_jeffersonFlag() {
+        String[] args = {getResource(TEST_CSV_LOCATION), "--jefferson"};
+        Arguments arguments = new Arguments(args);
+
+        assertInstanceOf(JeffersonMethod.class, arguments.getApportionmentMethod());
+        assertInstanceOf(AlphabeticalFormat.class, arguments.getRepresentationFormat());
+    }
+
+    @Test
+    public void argumentsTest_benefitFormat_descendingDefault() {
+        String[] args = {getResource(TEST_CSV_LOCATION), "--benefit"};
+        Arguments arguments = new Arguments(args);
+
+        RepresentationFormat format = arguments.getRepresentationFormat();
+        assertInstanceOf(BenefitFormat.class, format);
+        assertEquals(DisplayOrder.DESCENDING, ((BenefitFormat) format).getDisplayOrder());
+    }
+
+    @Test
+    public void argumentsTest_benefitFormat_ascendingSpecified() {
+        String[] args = {getResource(TEST_CSV_LOCATION), "--benefit", "--ascending"};
+        Arguments arguments = new Arguments(args);
+
+        RepresentationFormat format = arguments.getRepresentationFormat();
+        assertInstanceOf(BenefitFormat.class, format);
+        assertEquals(DisplayOrder.ASCENDING, ((BenefitFormat) format).getDisplayOrder());
+    }
+
+    @Test
+    public void argumentsTest_excelInput_excelOutput(@TempDir Path tempDir) throws IOException {
+        File inputFile = tempDir.resolve("states.xlsx").toFile();
+        try (XSSFWorkbook workbook = new XSSFWorkbook();
+             FileOutputStream outputStream = new FileOutputStream(inputFile)) {
+            workbook.createSheet();
+            workbook.write(outputStream);
+        }
+
+        String[] args = {inputFile.getPath(), "--out", "output.xlsx"};
+        Arguments arguments = new Arguments(args);
+
+        StateSource stateSource = arguments.getStateSupplier();
+        assertInstanceOf(ExcelInputFile.class, stateSource);
+        assertEquals(inputFile.getPath(), ((ExcelInputFile) stateSource).getExcelFile().getPath());
+
+        assertTrue(arguments.getOutputFile().isPresent());
+        OutputSource outputFile = arguments.getOutputFile().get();
+        assertInstanceOf(ExcelOutputFile.class, outputFile);
+        assertEquals("output.xlsx", ((ExcelOutputFile) outputFile).getOutputFilename());
+    }
+
+    @Test
+    public void argumentsTest_unsupportedOutputFile() {
+        String[] args = {getResource(TEST_CSV_LOCATION), "--out", "output.txt"};
+        Arguments arguments = new Arguments(args);
+
+        assertThrows(IllegalArgumentException.class, arguments::getOutputFile);
     }
 
     @SuppressWarnings("SameParameterValue")
